@@ -2,12 +2,21 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database.session import get_db
 from models.notice import Notice
+from models.user import User
 
 router = APIRouter()
 
-# CREATE NOTICE
+# CREATE NOTICE (ADMIN ONLY)
 @router.post("/notice")
 def create_notice(data: dict, db: Session = Depends(get_db)):
+
+    user = db.query(User).filter(User.email == data["email"]).first()
+
+    if not user:
+        return {"error": "User not found"}
+
+    if user.role != "admin":
+        return {"error": "Only admin can create notices"}
 
     new_notice = Notice(
         title=data["title"],

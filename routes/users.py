@@ -13,20 +13,29 @@ router = APIRouter()
 def register(user: dict, db: Session = Depends(get_db)):
 
     existing_user = db.query(User).filter(User.email == user["email"]).first()
+
     if existing_user:
         return {"error": "User already exists"}
 
+    print("USER DATA:", user)
+    print("PASSWORD:", user["password"])
+    hashed_password = hash_password(user["password"])
+
     new_user = User(
-        name=user["name"],
+        name=user["username"],
         email=user["email"],
-        password=hash_password(user["password"])
+        password=hashed_password,
+        role=user.get("role", "student")
     )
 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    return {"message": "User registered successfully"}
+    return {
+        "message": "User registered successfully",
+        "role": new_user.role
+    }
 
 # -------------------------
 # LOGIN (DB VERSION)
@@ -42,9 +51,15 @@ def login(user: dict, db: Session = Depends(get_db)):
     if not verify_password(user["password"], db_user.password):
         return {"error": "Invalid password"}
 
-    token = create_token({"email": db_user.email})
+    token = create_token(
+        {
+            "email": db_user.email,
+            "role": db_user.role
+        }
+    )
 
     return {
         "message": "Login successful",
-        "access_token": token
+        "access_token": token,
+        "role": db_user.role
     }
