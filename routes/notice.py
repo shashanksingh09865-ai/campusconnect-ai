@@ -1,16 +1,28 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 from database.session import get_db
 from models.notice import Notice
 from models.user import User
+from auth.auth_handler import verify_token
 
 router = APIRouter()
 
 # CREATE NOTICE (ADMIN ONLY)
 @router.post("/notice")
-def create_notice(data: dict, db: Session = Depends(get_db)):
+def create_notice(
+    data: dict,
+    token: str = Header(),
+    db: Session = Depends(get_db)
+):
 
-    user = db.query(User).filter(User.email == data["email"]).first()
+    user_data = verify_token(token)
+
+    if not user_data:
+        return {"error": "Invalid token"}
+
+    user = db.query(User).filter(
+        User.email == user_data["email"]
+    ).first()
 
     if not user:
         return {"error": "User not found"}
