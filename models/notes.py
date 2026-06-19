@@ -8,5 +8,8 @@ class Note(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String)
     subject = Column(String)
-    file_url = Column(String)  # for now simple text link
+    file_url = Column(String)
+
+    summary = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
