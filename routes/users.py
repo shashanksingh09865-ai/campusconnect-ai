@@ -28,7 +28,7 @@ def register(user: dict, db: Session = Depends(get_db)):
     hashed_password = hash_password(user["password"])
 
     new_user = User(
-        name=user["username"],
+        name=user["name"],
         email=user["email"],
         password=hashed_password,
         role=user.get("role", "student")
