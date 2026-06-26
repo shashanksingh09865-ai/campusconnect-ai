@@ -14,34 +14,32 @@ function Dashboard() {
       return;
     }
 
-    const fetchNotes = async () => {
-      try {
-        const response = await axios.get(
-          "http://127.0.0.1:8000/notes"
-        );
-
-        setNotes(response.data);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
     fetchNotes();
   }, [navigate]);
 
+  const fetchNotes = async () => {
+    try {
+      const response = await axios.get("http://127.0.0.1:8000/notes");
+      console.log(response.data);
+      setNotes(response.data);
+      
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
-
-    alert("Logged Out Successfully");
-
     navigate("/");
   };
 
   return (
-    <div>
-      <h1>CampusConnect AI Dashboard</h1>
+    <div style={{ padding: "20px" }}>
+      <h1>🎓 CampusConnect AI Dashboard</h1>
 
       <p>Welcome to CampusConnect AI 🚀</p>
+
+      <hr />
 
       <h2>Quick Actions</h2>
 
@@ -49,29 +47,38 @@ function Dashboard() {
         📄 Upload Notes
       </button>
 
-      <br />
-      <br />
-
-      <button onClick={() => navigate("/ai-chat")}>
-        🤖 Open AI Chat
+      <button
+        onClick={() => navigate("/ai-chat")}
+        style={{ marginLeft: "10px" }}
+      >
+        🤖 AI Chat
       </button>
 
-      <br />
-      <br />
-
-      <button onClick={handleLogout}>
+      <button
+        onClick={handleLogout}
+        style={{ marginLeft: "10px" }}
+      >
         🚪 Logout
       </button>
 
       <hr />
 
-      <h2>Uploaded Notes</h2>
+      <h2>📚 Uploaded Notes</h2>
 
       {notes.length === 0 ? (
         <p>No notes uploaded yet.</p>
       ) : (
         notes.map((note) => (
-          <div key={note.id}>
+          <div
+            key={note.id}
+            style={{
+              border: "1px solid #ccc",
+              borderRadius: "10px",
+              padding: "15px",
+              marginBottom: "20px",
+              backgroundColor: "#f8f9fa",
+            }}
+          >
             <h3>{note.title}</h3>
 
             <p>
@@ -79,18 +86,23 @@ function Dashboard() {
             </p>
 
             <p>
-              <strong>File:</strong> {note.file_url}
+              <strong>File Path:</strong> {note.file_url}
             </p>
 
             <p>
               <strong>AI Summary:</strong>
             </p>
 
-            <p>
-              {note.summary || "No summary available yet"}
-            </p>
-
-            <hr />
+            <div
+              style={{
+                backgroundColor: "#ffffff",
+                padding: "10px",
+                borderRadius: "5px",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {note.summary || "No summary available."}
+            </div>
           </div>
         ))
       )}

@@ -26,6 +26,7 @@ function Login() {
         "token",
         response.data.access_token
       );
+      console.log("Saved token:", localStorage.getItem("token"));
 
       alert("Login Successful!");
 

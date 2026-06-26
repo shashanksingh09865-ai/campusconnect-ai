@@ -1,29 +1,35 @@
-from fastapi import APIRouter, UploadFile, File, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, UploadFile, File
 import shutil
+import os
 
-from database.session import get_db
-from models.notes import Note
-
-from ai.pdf_reader import extract_text_from_pdf
+from utils.pdf_reader import extract_text_from_pdf
 from ai.summarizer import summarize_text
+from database.database import SessionLocal
+from models.notes import Note
 
 router = APIRouter()
 
-@router.post("/upload")
-async def upload_file(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
+UPLOAD_FOLDER = "uploads"
 
-    file_path = f"uploads/{file.filename}"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+@router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    # Save uploaded PDF
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    pdf_text = extract_text_from_pdf(file_path)
+    # Extract text from PDF
+    extracted_text = extract_text_from_pdf(file_path)
 
-    summary = summarize_text(pdf_text[:5000])
+    # Generate AI summary
+    summary = summarize_text(extracted_text)
+
+    # Save note to database
+    db = SessionLocal()
 
     new_note = Note(
         title=file.filename,
@@ -35,9 +41,12 @@ async def upload_file(
     db.add(new_note)
     db.commit()
     db.refresh(new_note)
+    db.close()
 
     return {
-        "message": "File uploaded and saved",
+        "message": "File uploaded successfully",
         "note_id": new_note.id,
+        "filename": file.filename,
+        "text_preview": extracted_text[:500],
         "summary": summary
     }
