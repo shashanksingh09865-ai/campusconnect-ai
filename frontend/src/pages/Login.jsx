@@ -1,6 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import api from "../api";import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -12,30 +12,47 @@ function Login() {
     e.preventDefault();
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/login",
-        {
-          email: email,
-          password: password,
-        }
-      );
+  const response = await api.post(
+    `/login`,
+    {
+      email: email,
+      password: password,
+    }
+  );
 
-      console.log(response.data);
+      console.log("========== LOGIN DEBUG ==========");
+      console.log("Full Response:", response);
+      console.log("Response Data:", response.data);
+      console.log("Access Token:", response.data.access_token);
 
       localStorage.setItem(
         "token",
         response.data.access_token
       );
-      console.log("Saved token:", localStorage.getItem("token"));
 
-      alert("Login Successful!");
+      console.log(
+        "Saved Token:",
+        localStorage.getItem("token")
+      );
+      console.log("=================================");
+
+      if (!response.data.access_token) {
+        toast.error("Token not received from server.");
+        return;
+      }
+
+      toast.success("Login Successful!");
 
       navigate("/dashboard");
 
     } catch (error) {
-      console.log(error);
+      console.log("Login Error:", error);
 
-      alert("Login Failed!");
+      if (error.response) {
+        console.log("Server Response:", error.response.data);
+      }
+
+      toast.error("Login Failed!");
     }
   };
 

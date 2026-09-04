@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
+
 from database.session import get_db
 from models.notice import Notice
 from models.user import User
@@ -7,8 +8,9 @@ from auth.auth_handler import verify_token
 
 router = APIRouter()
 
+
 # CREATE NOTICE (ADMIN ONLY)
-@router.post("/notice")
+@router.post("/notices")
 def create_notice(
     data: dict,
     token: str = Header(),
@@ -41,9 +43,48 @@ def create_notice(
 
     return {"message": "Notice created successfully"}
 
+
 # GET ALL NOTICES
 @router.get("/notices")
 def get_notices(db: Session = Depends(get_db)):
 
     notices = db.query(Notice).all()
     return notices
+
+
+# DELETE NOTICE (ADMIN ONLY)
+@router.delete("/notices/{notice_id}")
+def delete_notice(
+    notice_id: int,
+    token: str = Header(),
+    db: Session = Depends(get_db)
+):
+
+    user_data = verify_token(token)
+
+    if not user_data:
+        return {"error": "Invalid token"}
+
+    user = db.query(User).filter(
+        User.email == user_data["email"]
+    ).first()
+
+    if not user:
+        return {"error": "User not found"}
+
+    if user.role != "admin":
+        return {"error": "Admin access required"}
+
+    notice = db.query(Notice).filter(
+        Notice.id == notice_id
+    ).first()
+
+    if not notice:
+        return {"error": "Notice not found"}
+
+    db.delete(notice)
+    db.commit()
+
+    return {
+        "message": "Notice deleted successfully"
+    }

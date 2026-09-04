@@ -1,66 +1,105 @@
 import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import api from "../api";import { useNavigate } from "react-router-dom";
+import Footer from "../components/Footer";
 
 function AIChat() {
   const navigate = useNavigate();
+
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
+    const askAI = async () => {
+    if (!question.trim()) {
+      alert("Please enter a question.");
+      return;
+    }
 
-  const handleAsk = async (e) => {
-    e.preventDefault();
+    setLoading(true);
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/ask-ai",
-        {
-          question: question,
-        }
-      );
+      const token = localStorage.getItem("token");
 
-      setAnswer(response.data.answer);
-
+      const response = await api.post("/chat", {
+  message: question,
+});
+     setAnswer(response.data.ai);
     } catch (error) {
-      console.log(error);
-
-      alert("AI Request Failed!");
+      console.error(error);
+      alert("Failed to get AI response.");
+    } finally {
+      setLoading(false);
     }
   };
+    return (
+    <div className="min-h-screen bg-gray-100">
 
-  return (
-    <div>
-      <h1>CampusConnect AI Chat</h1>
+      {/* Header */}
+      <div className="bg-green-600 text-white shadow-lg">
+        <div className="max-w-6xl mx-auto flex justify-between items-center px-8 py-5">
 
-      <button onClick={() => navigate("/dashboard")}>
-        ⬅ Back to Dashboard
-      </button>
+          <div>
+            <h1 className="text-3xl font-bold">
+              🤖 CampusConnect AI Chat
+            </h1>
 
-      <br />
-      <br />
+            <p className="text-green-100">
+              Ask anything about your notes
+            </p>
+          </div>
 
-      <form onSubmit={handleAsk}>
-        <input
-          type="text"
-          placeholder="Ask anything..."
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-        />
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-white text-green-700 px-4 py-2 rounded-lg hover:bg-gray-100"
+          >
+            ⬅ Dashboard
+          </button>
 
-        <br />
-        <br />
+        </div>
+      </div>
 
-        <button type="submit">
-          Ask AI
-        </button>
-      </form>
+      {/* Body */}
+      <div className="max-w-5xl mx-auto p-8">
 
-      <br />
+        <div className="bg-white rounded-xl shadow-md p-6">
 
-      <h3>Answer:</h3>
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Ask AI anything about your uploaded notes..."
+            rows="6"
+            className="w-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
 
-      <p>{answer}</p>
+          <button
+            onClick={askAI}
+            disabled={loading}
+            className="mt-5 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg"
+          >
+            {loading ? "Thinking..." : "🤖 Ask AI"}
+          </button>
+
+        </div>
+
+        {answer && (
+          <div className="bg-white rounded-xl shadow-md p-6 mt-8">
+
+            <h2 className="text-2xl font-bold mb-4">
+              AI Response
+            </h2>
+
+            <div className="bg-gray-50 border rounded-lg p-4 whitespace-pre-wrap">
+              {answer}
+            </div>
+
+          </div>
+        )}
+
+      </div>
+
+      <Footer />
+
     </div>
   );
-}
+  }
 
 export default AIChat;

@@ -41,12 +41,19 @@ def dashboard(
     total_users = db.query(User).count()
     total_notices = db.query(Notice).count()
     total_notes = db.query(Note).count()
-
+    total_summaries = db.query(Note).filter(
+    Note.summary != None
+).count()
+    total_admins = db.query(User).filter(
+    User.role == "admin"
+).count()
     return {
         "message": "Admin Dashboard",
         "total_users": total_users,
         "total_notices": total_notices,
         "total_notes": total_notes,
+        "total_summaries": total_summaries,
+        "total_admins": total_admins,
         "latest_notices": notices,
         "latest_notes": notes
     }

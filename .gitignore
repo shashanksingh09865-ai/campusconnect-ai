@@ -8,9 +8,15 @@ venv/
 # Database file (auto generated)
 campusconnect.db
 
-# Environment variables (if used later)
+# Environment variables
 .env
 
 # IDE files
 .vscode/
 .idea/
+
+# Uploaded files
+uploads/
+
+# Frontend dependencies
+frontend/node_modules/

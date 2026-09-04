@@ -1,84 +1,81 @@
 import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import api from "../api";import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+
 
 function UploadNotes() {
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
 
-  const handleSubmit = async (e) => {
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleUpload = async (e) => {
     e.preventDefault();
 
+    if (!file) {
+     toast.error("Please select a PDF file.");
+      return;
+    }
+
+
+    if (!token) {
+      toast.error("Please login first.");
+      navigate("/");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/notes",
-        {
-          title: title,
-          subject: subject,
-          file_url: fileUrl
-        }
-      );
+      setLoading(true);
+
+      const response = await api.post("/notes", formData);
+
+      toast.success("✅ PDF uploaded successfully!");
 
       console.log(response.data);
 
-      alert("Note Uploaded Successfully!");
-
-      setTitle("");
-      setSubject("");
-      setFileUrl("");
-
+      navigate("/dashboard");
     } catch (error) {
-      console.log(error);
+      console.error(error);
 
-      alert("Upload Failed!");
+      if (error.response) {
+        toast.error(error.response.data.error || "Upload failed.");
+      } else {
+        toast.error("Unable to connect to server.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1>Upload Notes</h1>
-    <button onClick={() => navigate("/dashboard")}>
-  ⬅ Back to Dashboard
-</button>
+    <div style={{ padding: "30px", maxWidth: "600px", margin: "auto" }}>
+      <h1>📄 Upload Notes</h1>
 
-<br />
-<br />
-      <form onSubmit={handleSubmit}>
+      <button onClick={() => navigate("/dashboard")}>
+        ⬅ Back to Dashboard
+      </button>
+
+      <br />
+      <br />
+
+      <form onSubmit={handleUpload}>
+
         <input
-          type="text"
-          placeholder="Enter Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          type="file"
+          accept=".pdf"
+          onChange={(e) => setFile(e.target.files[0])}
         />
 
         <br />
         <br />
 
-        <input
-          type="text"
-          placeholder="Enter Subject"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-
-        <br />
-        <br />
-
-        <input
-          type="text"
-          placeholder="Enter File URL"
-          value={fileUrl}
-          onChange={(e) => setFileUrl(e.target.value)}
-        />
-
-        <br />
-        <br />
-
-        <button type="submit">
-          Upload Note
+        <button type="submit" disabled={loading}>
+          {loading ? "Uploading..." : "Upload PDF"}
         </button>
+
       </form>
     </div>
   );
