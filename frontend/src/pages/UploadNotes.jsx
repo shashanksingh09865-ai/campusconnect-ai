@@ -1,7 +1,7 @@
 import { useState } from "react";
-import api from "../api";import { useNavigate } from "react-router-dom";
+import api from "../api";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-
 
 function UploadNotes() {
   const navigate = useNavigate();
@@ -13,14 +13,7 @@ function UploadNotes() {
     e.preventDefault();
 
     if (!file) {
-     toast.error("Please select a PDF file.");
-      return;
-    }
-
-
-    if (!token) {
-      toast.error("Please login first.");
-      navigate("/");
+      toast.error("Please select a PDF file.");
       return;
     }
 
@@ -28,26 +21,36 @@ function UploadNotes() {
     formData.append("file", file);
 
     try {
-      setLoading(true);
+  setLoading(true);
 
-      const response = await api.post("/notes", formData);
+  const response = await api.post("/upload", formData);
 
-      toast.success("✅ PDF uploaded successfully!");
+  console.log("Upload Response:", response.data);
 
-      console.log(response.data);
+  toast.success("✅ PDF uploaded successfully!");
 
-      navigate("/dashboard");
-    } catch (error) {
-      console.error(error);
+  navigate("/dashboard");
 
-      if (error.response) {
-        toast.error(error.response.data.error || "Upload failed.");
-      } else {
-        toast.error("Unable to connect to server.");
-      }
-    } finally {
-      setLoading(false);
-    }
+} catch (error) {
+
+  console.error("Upload Error:", error);
+
+  if (error.response) {
+    console.log("Server Response:", error.response.data);
+    toast.error(
+      error.response.data?.error ||
+      error.response.data?.detail ||
+      "Upload failed."
+    );
+  } else if (error.request) {
+    toast.error("Server connection error.");
+  } else {
+    toast.error("Upload failed.");
+  }
+
+} finally {
+  setLoading(false);
+}
   };
 
   return (
@@ -62,7 +65,6 @@ function UploadNotes() {
       <br />
 
       <form onSubmit={handleUpload}>
-
         <input
           type="file"
           accept=".pdf"
@@ -75,7 +77,6 @@ function UploadNotes() {
         <button type="submit" disabled={loading}>
           {loading ? "Uploading..." : "Upload PDF"}
         </button>
-
       </form>
     </div>
   );
