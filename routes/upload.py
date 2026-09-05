@@ -80,14 +80,17 @@ async def upload_file(
     )
 
     db.add(new_note)
-    db.commit()
-    db.refresh(new_note)
+db.commit()
+db.refresh(new_note)
 
-    db.close()
+note_id = new_note.id
+user_id = current_user.id
 
-    return {
-        "message": "File uploaded successfully",
-        "note_id": new_note.id,
-        "user_id": current_user.id,
-        "summary": summary
-    }
+db.close()
+
+return {
+    "message": "File uploaded successfully",
+    "note_id": note_id,
+    "user_id": user_id,
+    "summary": summary
+}
