@@ -43,6 +43,10 @@ async def upload_file(
         db.close()
         return {"error": "User not found"}
 
+    # IMPORTANT:
+    # Save the user ID while the database session is active.
+    user_id = current_user.id
+
     # -----------------------
     # Save PDF
     # -----------------------
@@ -76,21 +80,25 @@ async def upload_file(
         subject="Uploaded PDF",
         file_url=file_path,
         summary=summary,
-        user_id=current_user.id
+        user_id=user_id
     )
 
     db.add(new_note)
-db.commit()
-db.refresh(new_note)
+    db.commit()
+    db.refresh(new_note)
 
-note_id = new_note.id
-user_id = current_user.id
+    # Save ID before closing session
+    note_id = new_note.id
 
-db.close()
+    db.close()
 
-return {
-    "message": "File uploaded successfully",
-    "note_id": note_id,
-    "user_id": user_id,
-    "summary": summary
-}
+    # -----------------------
+    # Response
+    # -----------------------
+
+    return {
+        "message": "File uploaded successfully",
+        "note_id": note_id,
+        "user_id": user_id,
+        "summary": summary
+    }
