@@ -23,7 +23,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://campusconnect-ai-plum.vercel.app",
+        "https://campusconnect-4z41qjc12-shashanksingh09865-ai.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
