@@ -20,3 +20,4 @@ uploads/
 
 # Frontend dependencies
 frontend/node_modules/
+health_check.py
