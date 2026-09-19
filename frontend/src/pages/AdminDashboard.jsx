@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api";import Loading from "../components/Loading";
+import api from "../api";
+import Loading from "../components/Loading";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/errorHandler";
 
 export default function AdminDashboard() {
-
   const navigate = useNavigate();
 
   // ============================
@@ -34,16 +34,12 @@ export default function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-
-      const token = localStorage.getItem("token");
-
       const response = await api.get("/users");
-
-      setUsers(response.data);
-
+      return response.data;
     } catch (error) {
-    handleApiError(error);
-}
+      handleApiError(error);
+      return [];
+    }
   };
 
   // ============================
@@ -52,16 +48,12 @@ export default function AdminDashboard() {
 
   const fetchNotes = async () => {
     try {
-
-      const token = localStorage.getItem("token");
-
       const response = await api.get("/users");
-
-      setNotes(response.data);
-
+      return response.data;
     } catch (error) {
-    handleApiError(error);
-}
+      handleApiError(error);
+      return [];
+    }
   };
 
   // ============================
@@ -69,18 +61,19 @@ export default function AdminDashboard() {
   // ============================
 
   const fetchStats = async () => {
-
     try {
-
-      const token = localStorage.getItem("token");
-
       const response = await api.get("/users");
-
-      setStats(response.data);
-
+      return response.data;
     } catch (error) {
-    handleApiError(error);
-}
+      handleApiError(error);
+      return {
+        total_users: 0,
+        total_notes: 0,
+        total_notices: 0,
+        total_admins: 0,
+        total_summaries: 0,
+      };
+    }
   };
 
   // ============================
@@ -88,18 +81,32 @@ export default function AdminDashboard() {
   // ============================
 
   const fetchNotices = async () => {
-
     try {
-
-      const response = await api.get(
-        `/admin/notices`
-      );
-
-      setNotices(response.data);
-
+      const response = await api.get("/admin/notices");
+      return response.data;
     } catch (error) {
-    handleApiError(error);
-}
+      handleApiError(error);
+      return [];
+    }
+  };
+
+  // ============================
+  // Reload Dashboard Data
+  // ============================
+
+  const reloadDashboard = async () => {
+    const [usersData, notesData, statsData, noticesData] =
+      await Promise.all([
+        fetchUsers(),
+        fetchNotes(),
+        fetchStats(),
+        fetchNotices(),
+      ]);
+
+    setUsers(usersData);
+    setNotes(notesData);
+    setStats(statsData);
+    setNotices(noticesData);
   };
 
   // ============================
@@ -107,11 +114,7 @@ export default function AdminDashboard() {
   // ============================
 
   const addNotice = async () => {
-
     try {
-
-      const token = localStorage.getItem("token");
-
       await api.post("/notices", {
         title,
         content,
@@ -122,13 +125,10 @@ export default function AdminDashboard() {
       setTitle("");
       setContent("");
 
-      fetchNotices();
-      fetchStats();
-
+      await reloadDashboard();
     } catch (error) {
-    handleApiError(error);
-}
-    
+      handleApiError(error);
+    }
   };
 
   // ============================
@@ -136,7 +136,6 @@ export default function AdminDashboard() {
   // ============================
 
   const deleteNotice = async (id) => {
-
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this notice?"
     );
@@ -144,19 +143,14 @@ export default function AdminDashboard() {
     if (!confirmDelete) return;
 
     try {
-
-      const token = localStorage.getItem("token");
-
       await api.delete(`/notices/${id}`);
 
       toast.success("Notice deleted successfully!");
 
-      fetchNotices();
-      fetchStats();
-
+      await reloadDashboard();
     } catch (error) {
-    handleApiError(error);
-}
+      handleApiError(error);
+    }
   };
 
   // ============================
@@ -164,24 +158,17 @@ export default function AdminDashboard() {
   // ============================
 
   const deleteUser = async (id) => {
-
-    const confirmDelete = window.confirm(
-      "Delete this user?"
-    );
+    const confirmDelete = window.confirm("Delete this user?");
 
     if (!confirmDelete) return;
 
     try {
-
-      const token = localStorage.getItem("token");
-
       await api.delete(`/users/${id}`);
-      fetchUsers();
-      fetchStats();
 
-    }catch (error) {
-    handleApiError(error);
-}
+      await reloadDashboard();
+    } catch (error) {
+      handleApiError(error);
+    }
   };
 
   // ============================
@@ -189,34 +176,61 @@ export default function AdminDashboard() {
   // ============================
 
   useEffect(() => {
-  Promise.all([
-    fetchUsers(),
-    fetchNotes(),
-    fetchStats(),
-    fetchNotices(),
-  ]).finally(() => {
-    setLoading(false);
-  });
-}, []);
+    let cancelled = false;
+
+    const loadDashboard = async () => {
+      try {
+        const [usersData, notesData, statsData, noticesData] =
+          await Promise.all([
+            fetchUsers(),
+            fetchNotes(),
+            fetchStats(),
+            fetchNotices(),
+          ]);
+
+        if (cancelled) return;
+
+        setUsers(usersData);
+        setNotes(notesData);
+        setStats(statsData);
+        setNotices(noticesData);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ============================
   // Logout
   // ============================
 
   const logout = () => {
-
     localStorage.removeItem("token");
-
     navigate("/");
-
   };
+
+  // ============================
+  // Loading
+  // ============================
+
   if (loading) {
-  return <Loading />;
-}
+    return <Loading />;
+  }
+
+  // ============================
+  // UI
+  // ============================
 
   return (
-        <div className="min-h-screen bg-gray-100">
-
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-purple-700 text-white p-5 flex justify-between items-center">
         <h1 className="text-3xl font-bold">
@@ -232,10 +246,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto p-8">
-
         {/* Statistics */}
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-
           <div className="bg-blue-100 rounded-xl p-5 text-center shadow">
             <h3 className="font-semibold">👥 Users</h3>
             <p className="text-3xl font-bold text-blue-700 mt-2">
@@ -270,20 +282,16 @@ export default function AdminDashboard() {
               {stats.total_summaries}
             </p>
           </div>
-
         </div>
 
         {/* Users */}
         <div className="bg-white rounded-xl shadow p-6 mb-8">
-
           <h2 className="text-2xl font-bold mb-4">
             👥 Registered Users
           </h2>
 
           <table className="w-full border">
-
             <thead className="bg-gray-200">
-
               <tr>
                 <th className="border p-2">ID</th>
                 <th className="border p-2">Name</th>
@@ -291,51 +299,37 @@ export default function AdminDashboard() {
                 <th className="border p-2">Role</th>
                 <th className="border p-2">Action</th>
               </tr>
-
             </thead>
 
             <tbody>
-
               {users.map((user) => (
-
                 <tr key={user.id}>
-
                   <td className="border p-2">{user.id}</td>
                   <td className="border p-2">{user.name}</td>
                   <td className="border p-2">{user.email}</td>
                   <td className="border p-2">{user.role}</td>
 
                   <td className="border p-2">
-
                     <button
                       onClick={() => deleteUser(user.id)}
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
                     >
                       Delete
                     </button>
-
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
+                  </td>                </tr>
+            ))}
+          </tbody>
+        </table>
+       </div>
 
         {/* Notes */}
         <div className="bg-white rounded-xl shadow p-6 mb-8">
-
-          <h2 className="text-2xl font-bold mb-4">
+         <h2 className="text-2xl font-bold mb-4">
             📚 Uploaded Notes
           </h2>
 
           <table className="w-full border">
-
-            <thead className="bg-gray-200">
+          <thead className="bg-gray-200">
               <tr>
                 <th className="border p-2">ID</th>
                 <th className="border p-2">Title</th>
@@ -345,37 +339,31 @@ export default function AdminDashboard() {
             </thead>
 
             <tbody>
-
-              {notes.map((note) => (
-
+            {notes.map((note) => (
                 <tr key={note.id}>
+                 <td className="border p-2">{note.id}</td>
 
-                  <td className="border p-2">{note.id}</td>
+                  <td className="border p-2">
+                    {note.title}
+                  </td>
 
-                  <td className="border p-2">{note.title}</td>
-
-                  <td className="border p-2">{note.subject}</td>
+                  <td className="border p-2">
+                    {note.subject}
+                  </td>
 
                   <td className="border p-2">
                     {note.summary
                       ? note.summary.substring(0, 100)
                       : "No Summary"}
                   </td>
-
                 </tr>
-
               ))}
-
             </tbody>
-
           </table>
-
         </div>
 
         {/* Publish Notice */}
-
         <div className="bg-white rounded-xl shadow p-6 mb-8">
-
           <h2 className="text-2xl font-bold mb-4">
             📢 Publish Notice
           </h2>
@@ -402,30 +390,22 @@ export default function AdminDashboard() {
           >
             ➕ Publish Notice
           </button>
-
         </div>
 
         {/* Notices */}
-
         <div className="bg-white rounded-xl shadow p-6">
-
           <h2 className="text-2xl font-bold mb-4">
             📢 All Notices
           </h2>
 
           {notices.length === 0 ? (
-
             <p>No notices available.</p>
-
           ) : (
-
             notices.map((notice) => (
-
               <div
                 key={notice.id}
                 className="border rounded-lg p-4 mb-4"
               >
-
                 <h3 className="text-xl font-bold">
                   {notice.title}
                 </h3>
@@ -440,17 +420,11 @@ export default function AdminDashboard() {
                 >
                   🗑 Delete Notice
                 </button>
-
               </div>
-
             ))
-
           )}
-
         </div>
-
       </div>
-
     </div>
   );
 }

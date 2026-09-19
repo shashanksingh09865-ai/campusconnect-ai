@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import api from "../api";import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import api from "../api";
 import Footer from "../components/Footer";
 import Loading from "../components/Loading";
 import { toast } from "react-toastify";
@@ -8,7 +9,7 @@ import { handleApiError } from "../utils/errorHandler";
 function Dashboard() {
   const navigate = useNavigate();
 
-  const [notices, setNotices] = useState([]); 
+  const [notices, setNotices] = useState([]);
   const [notes, setNotes] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -17,115 +18,100 @@ function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const notesPerPage = 4;
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const [stats, setStats] = useState({
-  total_notes: 0,
-  summarized_notes: 0,
-  latest_upload: null,
-});
-
-  useEffect(() => {
-     const token = localStorage.getItem("token");
-   
-
-    if (!token) {
-      navigate("/");
-      return;
-    }
-
-    Promise.all([
-  fetchNotes(),
-  fetchStats(),
-  fetchNotices(),
-]).finally(() => {
-  setLoading(false);
-});
-  }, [navigate]);
-
-  useEffect(() => {
-
-    const timer = setTimeout(() => {
-
-        setDebouncedSearch(search);
-
-    }, 500);
-
-    return () => clearTimeout(timer);
-
-}, [search]);
-
-useEffect(() => {
-  if (debouncedSearch === "") {
-    fetchNotes();
-  } else {
-    searchNotes(debouncedSearch);
-  }
-}, [debouncedSearch]);
-   
-  const searchNotes = async (text) => {
-
-  console.log("Searching:", text);
-
-  try {
-
-    const response = await api.get(
-      `/notes`
-    );
-
-    console.log("Search Result:", response.data);
-
-    setNotes(response.data);
-
-  } catch (error) {
-  handleApiError(error);
-}
-};
-  const fetchNotes = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await api.get("/notes");
-
-      setNotes(response.data);
-      setStats({
-        total_notes: response.data.length,
-        summarized_notes: response.data.filter((note) => note.summarized).length,
-        latest_upload: response.data.length > 0 ? new Date(Math.max(...response.data.map((note) => new Date(note.created_at)))) : null,
-      });
-    } catch (error) {
-  handleApiError(error);
-}
-  };
-  const fetchStats = async () => {
-  try {
-    const token = localStorage.getItem("token");
-
-    const response = await api.get("/notes");
-
-    
-setStats(
-  response.data || {
     total_notes: 0,
     summarized_notes: 0,
     latest_upload: null,
-  }
-);
-  } catch (error) {
-  handleApiError(error);
-}
-};
+  });
 
-const fetchNotices = async () => {
-  try {
-    const response = await api.get(
-      `/notices`
-    );
+  const fetchNotes = async () => {
+    try {
+      const response = await api.get("/notes");
 
-    setNotices(response.data);
+      setNotes(response.data);
 
-  } catch (error) {
-  handleApiError(error);
-}
-};
+      setStats({
+        total_notes: response.data.length,
+        summarized_notes: response.data.filter(
+          (note) => note.summarized
+        ).length,
+        latest_upload:
+          response.data.length > 0
+            ? new Date(
+                Math.max(
+                  ...response.data.map(
+                    (note) => new Date(note.created_at)
+                  )
+                )
+              )
+            : null,
+      });
+
+      return response.data;
+    } catch (error) {
+      handleApiError(error);
+      return [];
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get("/notes");
+
+      const notesData = response.data || [];
+
+      setStats({
+        total_notes: notesData.length,
+        summarized_notes: notesData.filter(
+          (note) => note.summarized
+        ).length,
+        latest_upload:
+          notesData.length > 0
+            ? new Date(
+                Math.max(
+                  ...notesData.map(
+                    (note) => new Date(note.created_at)
+                  )
+                )
+              )
+            : null,
+      });
+
+      return notesData;
+    } catch (error) {
+      handleApiError(error);
+
+      return [];
+    }
+  };
+
+  const fetchNotices = async () => {
+    try {
+      const response = await api.get("/notices");
+
+      setNotices(response.data);
+
+      return response.data;
+    } catch (error) {
+      handleApiError(error);
+      return [];
+    }
+  };
+
+  const searchNotes = async (text) => {
+    console.log("Searching:", text);
+
+    try {
+      const response = await api.get("/notes");
+
+      console.log("Search Result:", response.data);
+
+      setNotes(response.data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
 
   const deleteNote = async (id) => {
     const confirmDelete = window.confirm(
@@ -135,66 +121,123 @@ const fetchNotices = async () => {
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await api.delete(`/notes/${id}`);
       await api.delete(`/notes/${id}`);
+
       toast.success("Note deleted successfully!");
-      fetchNotes();
-      fetchStats();
+
+      await fetchNotes();
+      await fetchStats();
     } catch (error) {
-  handleApiError(error);
-}
+      handleApiError(error);
+    }
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/");
+      return;
+    }
+
+    const loadDashboard = async () => {
+      try {
+        await Promise.all([
+          fetchNotes(),
+          fetchStats(),
+          fetchNotices(),
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, [navigate]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+  const loadSearchResults = async () => {
+    if (debouncedSearch === "") {
+      await fetchNotes();
+    } else {
+      await searchNotes(debouncedSearch);
+    }
+  };
+
+  loadSearchResults();
+}, [debouncedSearch]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
   };
 
- const filteredNotes = notes
-  .filter((note) => {
-    const matchesSubject =
-      subjectFilter === "All" ||
-      note.subject === subjectFilter;
+  const filteredNotes = notes
+    .filter((note) => {
+      const matchesSubject =
+        subjectFilter === "All" ||
+        note.subject === subjectFilter;
 
-    const matchesSearch =
-      note.title.toLowerCase().includes(search.toLowerCase()) ||
-      note.subject.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch =
+        note.title
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        note.subject
+          .toLowerCase()
+          .includes(search.toLowerCase());
 
-    return matchesSubject && matchesSearch;
-  })
-  .sort((a, b) => {
-    if (sortBy === "newest")
-      return new Date(b.created_at) - new Date(a.created_at);
+      return matchesSubject && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "newest") {
+        return (
+          new Date(b.created_at) -
+          new Date(a.created_at)
+        );
+      }
 
-    if (sortBy === "oldest")
-      return new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === "oldest") {
+        return (
+          new Date(a.created_at) -
+          new Date(b.created_at)
+        );
+      }
 
-    if (sortBy === "az")
-      return a.title.localeCompare(b.title);
+      if (sortBy === "az") {
+        return a.title.localeCompare(b.title);
+      }
 
-    if (sortBy === "za")
-      return b.title.localeCompare(a.title);
+      if (sortBy === "za") {
+        return b.title.localeCompare(a.title);
+      }
 
-    return 0;
-  });
+      return 0;
+    });
 
-const indexOfLastNote = currentPage * notesPerPage;
-const indexOfFirstNote = indexOfLastNote - notesPerPage;
+  const indexOfLastNote = currentPage * notesPerPage;
+  const indexOfFirstNote = indexOfLastNote - notesPerPage;
 
-const currentNotes = filteredNotes.slice(
-  indexOfFirstNote,
-  indexOfLastNote
-);
+  const currentNotes = filteredNotes.slice(
+    indexOfFirstNote,
+    indexOfLastNote
+  );
 
-const totalPages = Math.ceil(
-  filteredNotes.length / notesPerPage
-);
-  console.log("Notes:", notes);
-console.log("Filtered Notes:", filteredNotes);
-if (loading) {
-  return <Loading />;
-}
+  const totalPages = Math.ceil(
+    filteredNotes.length / notesPerPage
+  );
+
+  if (loading) {
+    return <Loading />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -256,30 +299,48 @@ if (loading) {
             />
 
             <select
-  value={sortBy}
-  onChange={(e) => setSortBy(e.target.value)}
-  className="mt-4 w-full border rounded-lg p-2"
->
-  <option value="newest">Newest First</option>
-  <option value="oldest">Oldest First</option>
-  <option value="az">Title A-Z</option>
-  <option value="za">Title Z-A</option>
-</select>
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="mt-4 w-full border rounded-lg p-2"
+            >
+              <option value="newest">
+                Newest First
+              </option>
+              <option value="oldest">
+                Oldest First
+              </option>
+              <option value="az">
+                Title A-Z
+              </option>
+              <option value="za">
+                Title Z-A
+              </option>
+            </select>
 
-<select
-  value={subjectFilter}
-  onChange={(e) => setSubjectFilter(e.target.value)}
-  className="mt-4 w-full border rounded-lg p-2"
->
-  <option value="All">All Subjects</option>
+            <select
+              value={subjectFilter}
+              onChange={(e) =>
+                setSubjectFilter(e.target.value)
+              }
+              className="mt-4 w-full border rounded-lg p-2"
+            >
+              <option value="All">
+                All Subjects
+              </option>
 
-  {[...new Set(notes.map((note) => note.subject))].map((subject) => (
-    <option key={subject} value={subject}>
-      {subject}
-    </option>
-  ))}
-</select>
-
+              {[
+                ...new Set(
+                  notes.map((note) => note.subject)
+                ),
+              ].map((subject) => (
+                <option
+                  key={subject}
+                  value={subject}
+                >
+                  {subject}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -298,15 +359,16 @@ if (loading) {
           >
             🤖 AI Chat
           </button>
+
           <button
-  onClick={() => navigate("/profile")}
-  className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-lg"
->
-  👤 My Profile
-</button>
+            onClick={() => navigate("/profile")}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-lg"
+          >
+            👤 My Profile
+          </button>
         </div>
 
-                {/* Notes */}
+        {/* Notes */}
         <div className="grid lg:grid-cols-2 gap-6">
           {filteredNotes.length === 0 ? (
             <div className="col-span-2 bg-white rounded-xl shadow p-8 text-center">
@@ -316,9 +378,14 @@ if (loading) {
             </div>
           ) : (
             currentNotes.map((note) => {
-  const pdfUrl = note.file_url.startsWith("http")
-    ? note.file_url
-    : `${import.meta.env.VITE_API_URL}/${note.file_url.replace(/\\/g, "/")}`;
+              const pdfUrl = note.file_url.startsWith(
+                "http"
+              )
+                ? note.file_url
+                : `${import.meta.env.VITE_API_URL}/${note.file_url.replace(
+                    /\\/g,
+                    "/"
+                  )}`;
 
               return (
                 <div
@@ -339,7 +406,8 @@ if (loading) {
                     </h3>
 
                     <div className="bg-gray-50 border rounded-lg p-3 whitespace-pre-wrap">
-                      {note.summary || "No summary available."}
+                      {note.summary ||
+                        "No summary available."}
                     </div>
                   </div>
 
@@ -362,7 +430,9 @@ if (loading) {
                     </a>
 
                     <button
-                      onClick={() => deleteNote(note.id)}
+                      onClick={() =>
+                        deleteNote(note.id)
+                      }
                       className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
                     >
                       🗑 Delete
@@ -374,52 +444,52 @@ if (loading) {
           )}
         </div>
 
+        {/* Pagination */}
         <div className="flex justify-center items-center gap-4 mt-8">
+          <button
+            onClick={() =>
+              setCurrentPage(currentPage - 1)
+            }
+            disabled={currentPage === 1}
+            className="bg-gray-500 text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            ⬅ Previous
+          </button>
 
-  <button
-    onClick={() => setCurrentPage(currentPage - 1)}
-    disabled={currentPage === 1}
-    className="bg-gray-500 text-white px-4 py-2 rounded disabled:opacity-50"
-  >
-    ⬅ Previous
-  </button>
+          <span className="font-semibold">
+            Page {currentPage} of {totalPages || 1}
+          </span>
 
-  <span className="font-semibold">
-    Page {currentPage} of {totalPages || 1}
-  </span>
+          <button
+            onClick={() =>
+              setCurrentPage(currentPage + 1)
+            }
+            disabled={
+              currentPage === totalPages ||
+              totalPages === 0
+            }
+            className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            Next ➡
+          </button>
+        </div>
 
-  <button
-    onClick={() => setCurrentPage(currentPage + 1)}
-    disabled={currentPage === totalPages || totalPages === 0}
-    className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-  >
-    Next ➡
-  </button>
-
-</div>
-
-        {/* 📢 Latest Notices */}
+        {/* Latest Notices */}
         <div className="bg-white rounded-xl shadow-md p-6 mt-8">
-
           <h2 className="text-2xl font-bold mb-4">
             📢 Latest Notices
           </h2>
 
           {notices.length === 0 ? (
-
             <p className="text-gray-500">
               No notices available.
             </p>
-
           ) : (
-
             notices.map((notice) => (
-
               <div
                 key={notice.id}
                 className="border rounded-lg p-4 mb-4"
               >
-
                 <h3 className="text-xl font-bold">
                   {notice.title}
                 </h3>
@@ -427,15 +497,10 @@ if (loading) {
                 <p className="mt-2 text-gray-700">
                   {notice.content}
                 </p>
-
               </div>
-
             ))
-
           )}
-
         </div>
-
       </div>
 
       <Footer />

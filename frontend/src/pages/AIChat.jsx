@@ -1,5 +1,6 @@
 import { useState } from "react";
-import api from "../api";import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import api from "../api";
 import Footer from "../components/Footer";
 
 function AIChat() {
@@ -8,7 +9,8 @@ function AIChat() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
-    const askAI = async () => {
+
+  const askAI = async () => {
     if (!question.trim()) {
       alert("Please enter a question.");
       return;
@@ -17,12 +19,11 @@ function AIChat() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
-
       const response = await api.post("/chat", {
-  message: question,
-});
-     setAnswer(response.data.ai);
+        message: question,
+      });
+
+      setAnswer(response.data.ai);
     } catch (error) {
       console.error(error);
       alert("Failed to get AI response.");
@@ -30,13 +31,12 @@ function AIChat() {
       setLoading(false);
     }
   };
-    return (
-    <div className="min-h-screen bg-gray-100">
 
+  return (
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-green-600 text-white shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-center px-8 py-5">
-
           <div>
             <h1 className="text-3xl font-bold">
               🤖 CampusConnect AI Chat
@@ -51,17 +51,14 @@ function AIChat() {
             onClick={() => navigate("/dashboard")}
             className="bg-white text-green-700 px-4 py-2 rounded-lg hover:bg-gray-100"
           >
-            ⬅ Dashboard
+            ← Dashboard
           </button>
-
         </div>
       </div>
 
       {/* Body */}
       <div className="max-w-5xl mx-auto p-8">
-
         <div className="bg-white rounded-xl shadow-md p-6">
-
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -77,12 +74,10 @@ function AIChat() {
           >
             {loading ? "Thinking..." : "🤖 Ask AI"}
           </button>
-
         </div>
 
         {answer && (
           <div className="bg-white rounded-xl shadow-md p-6 mt-8">
-
             <h2 className="text-2xl font-bold mb-4">
               AI Response
             </h2>
@@ -90,16 +85,13 @@ function AIChat() {
             <div className="bg-gray-50 border rounded-lg p-4 whitespace-pre-wrap">
               {answer}
             </div>
-
           </div>
         )}
-
       </div>
 
       <Footer />
-
     </div>
   );
-  }
+}
 
 export default AIChat;
